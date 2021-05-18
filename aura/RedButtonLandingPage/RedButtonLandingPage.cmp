@@ -1,0 +1,790 @@
+<aura:component controller="RedButtonController"  implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes,force:lightningQuickAction,lightning:isUrlAddressable" access="global">
+    <!-- create 2 aura handler with waiting and donewaiting events--> 
+    <aura:handler event="aura:waiting" action="{!c.showSpinner}"/>
+    <aura:handler event="aura:doneWaiting" action="{!c.hideSpinner}"/>
+    <!--declare aura attributes-->	
+    <lightning:navigation aura:id="navService"/>
+    <aura:attribute name="options" type="List" default="[
+                                                        {'label': 'Yes', 'value': 'Yes'},
+                                                        {'label': 'No', 'value': 'No'}
+                                                        ]"/>
+    <aura:attribute name="value" type="String" default="Yes"/>
+    <aura:attribute name="searchCriteria" type="String[]" default="Case Number,Sales Order Number,Cust PO Number,Quote Number,Repair Notification Number,Subject"/>
+    <aura:attribute name="searchAcctCriteria" type="String[]" default="Account Name,SAP Sold To Number"/>
+    <aura:attribute name="searchText" type="String"/> 
+    <aura:attribute name="searchAcctText" type="String"/>
+    <aura:attribute type="Case[]" name="caseList"/>
+    <aura:attribute type="List" name="accList"/>
+    <aura:attribute name="mycolumns" type="List"/>
+     <aura:attribute name="Spinner" type="boolean" default="false"/>
+    <aura:attribute name="isHomeHeaderNeed" type="boolean" default="true"/>
+    <aura:attribute name="isLandingPage" type="boolean" default="true"/>
+    <aura:attribute name="isSearchNeed" type="boolean" default="false"/>
+    <aura:attribute name="isSearchResFound" type="boolean" default="false"/>
+    <aura:attribute name="isSearchResNotFound" type="boolean" default="false"/>
+    <aura:attribute name="isCasInfoSelected" type="boolean" default="false"/>
+    <aura:attribute name="isCasInfoHelpNeeded" type="boolean" default="false"/>
+    <aura:attribute name="isCasInfoInactiveHelpNeeded" type="boolean" default="false"/>
+    <aura:attribute name="isWorkstreamNeeded" type="boolean" default="false"/>
+    
+    <aura:attribute name="caseInfoMap" type="Map"/>
+    <aura:attribute name="optionWorkstream" type="List" default="[
+                                                                 {'label': 'Repair and Overhaul', 'value': 'ROI'},
+                                                                 {'label': 'Spares', 'value': 'Spares'},
+                                                                 {'label': 'OEM – Includes all OEM and Production Return Orders PRO', 'value': 'OEM'}
+                                                                 ]"/>
+    <aura:attribute name="optionWorkstreamValue" type="String" default="ROI"/>
+    <aura:attribute name="workstreamSelectedDrpDownValue" type="String" default=" "/>
+    <aura:attribute name="workstreamRoiDrpDown" type="List" default="[
+                                                                     {'label': 'Repair Inquiry – General issue with a repair order', 'value': 'Repair Inquiry'},
+                                                                     {'label': 'Quotes escalation – Escalation of R&amp;O Quote approval problem', 'value': 'Quotes Escalation'}
+                                                                     ]"/>
+    <aura:attribute name="workstreamSparesDrpDown" type="List" default="[
+                                                                        {'label': 'Place Order – Issue regarding initial order', 'value': 'Place Order'},
+                                                                        {'label': 'Order Changes – Change to an existing order', 'value': 'Order Changes'},
+                                                                        {'label': 'Order Status – Question regarding the status of an existing order', 'value': 'Order Status'},
+                                                                        {'label': 'Quotes/Availability – Question about a quote or request for quote', 'value': 'Quotes/Availability'},
+                                                                        {'label': 'Other – Not covered by any of the categories above', 'value': 'Other'},
+                                                                        {'label': 'FGI Place Order – New order for FGI inventory', 'value': 'FGI Orders'},
+                                                                        {'label': 'GoDirect Trade FGI Order – Issue regarding FGI order', 'value': 'GoDirect Trade FGI'},
+                                                                        {'label': 'GoDirect Trade Place Order – Issue regarding initial order', 'value': 'GoDirect Trade Place Order'}
+                                                                        ]"/>
+    <aura:attribute name="workstreamOEMDrpDown" type="List" default="[
+                                                                     {'label': 'Place Order – Issue regarding initial order', 'value': 'Place Order'},
+                                                                     {'label': 'Order Changes – Change to an existing order', 'value': 'Order Changes'},
+                                                                     {'label': 'Order Status – Question regarding the status of an existing order', 'value': 'Order Status'},
+                                                                     {'label': 'Quotes/Availability – Question about a quote or request for quote', 'value': 'Quotes/Availability'},
+                                                                     {'label': 'Other – Not covered by any of the categories above', 'value': 'Other'},
+                                                                     {'label': 'FGI Place Order – New order for FGI inventory', 'value': 'FGI Orders'},
+                                                                     {'label': 'GoDirect Trade FGI Order – Issue regarding FGI order', 'value': 'GoDirect Trade FGI'},
+                                                                     {'label': 'GoDirect Trade Place Order – Issue regarding initial order', 'value': 'GoDirect Trade Place Order'},
+                                                                     {'label': 'Returns (RMA) – Questions about an RMA order', 'value': 'Returns'},
+                                                                     {'label': 'Production Return Order (PRO) – Question about a production return order', 'value': 'PRO'}
+                                                                     ]"/>
+    <aura:attribute name="valueCaseInfo" type="String"/>
+    <aura:attribute name="isOpenModel" type="boolean" default="false"/>
+    <aura:attribute name="modelBodyValue" type="String"/>
+    
+    <aura:attribute name="fileToBeUploaded" type="List" default="[]"/>
+    <aura:attribute name="fileTitleExceedList" type="List"/>
+    <aura:attribute name="isFileTitleExceeded" type="boolean" default="false"/>
+    <aura:attribute name="caseInfoHelpNeededMap" type="Map" default="{ casId: '', Comments: '',EmailId: ''}"/>
+    
+    <aura:attribute name="caseInfoInactiveMap" type="Map" default="{ SalesOrderNumber: '', CustPoNumber: '',RepairNotificationNumber: '',QuoteNumber: '',Subject: '',Comments: '',EmailId: '',Workstream: '',Complexity: '',CasId: '',AccountId: '',WorkstreamOption: ''}"/>
+    <aura:attribute name="optionsCasInfoInactive" type="List" default="[
+                                                        {'label': 'Yes', 'value': 'Yes'},
+                                                        {'label': 'No', 'value': 'No'}
+                                                        ]"/>
+    <aura:attribute name="optionCasInfoInactiveValue" type="String"/>
+    
+    <aura:attribute type="List" name="casCommList"/>
+    
+    <!--loading spinner start... style=Brand Medium (blue dots)-->
+    <aura:if isTrue="{!v.Spinner}">
+        <div aura:id="spinnerId" class="slds-spinner_container">
+            <div class="slds-spinner--brand  slds-spinner slds-spinner--large slds-is-relative" role="alert">
+                <span class="slds-assistive-text">Loading</span>
+                <div class="slds-spinner__dot-a"></div>
+                <div class="slds-spinner__dot-b"></div>
+            </div>
+        </div>
+    </aura:if>
+    <!-- Loading spinner end-->  
+    <aura:if isTrue="{!v.isHomeHeaderNeed}">
+        <div style="padding: 10px;background-color: lightblue;color: black;font-size: large;">
+            <lightning:layout >
+                <lightning:layoutItem padding="around-small" flexibility="auto, no-grow" size="6">
+                    <lightning:icon iconName="standard:home" size="large" />
+                    <div style="display: inline;padding-left: 10px;">
+                        <h1><b>GCE CONNECT</b></h1>
+                    </div>                   
+                </lightning:layoutItem>
+                <lightning:layoutItem  alignmentBump="left">
+                    <lightning:buttonGroup>
+                        <lightning:button variant="brand-outline" label="CSR Roster" onclick="{! c.CsrRosterClick }" />
+                        <lightning:button variant="brand-outline" label="Escalation Contact Points" onclick="{! c.EcpClick }" />
+                        <lightning:button variant="brand-outline" label="GCE &amp; Infosys" onclick="{! c.GceInfosysClick }" />
+                        <!--<lightning:buttonMenu disabled="true" alternativeText="Show menu" class="slds-button_last" variant="border-filled" menuAlignment="right">
+                            <lightning:menuItem class="clsFontSize" label="Menu Item One" value="item1" />
+                            <lightning:menuItem class="clsFontSize" label="Menu Item Two" value="item2" />
+                            <lightning:menuItem class="clsFontSize" label="Menu Item Three" value="item3" />
+                        </lightning:buttonMenu>-->
+                    </lightning:buttonGroup>
+                </lightning:layoutItem>              
+            </lightning:layout>        
+        </div>
+    </aura:if>
+    <aura:if isTrue="{!v.isSearchNeed}">
+        <div style="background-color: honeydew;">
+            <lightning:layout horizontalAlign="space">
+                <lightning:layoutItem padding="around-small" flexibility="auto, no-grow" size="12">
+                    <span style="font-size: 1.05rem !important;">Is your inquiry regarding an existing case?</span>
+                    <lightning:radioGroup name="radioGroup"
+                                          options="{! v.options }"
+                                          value="{! v.value }"
+                                          type="radio"
+                                          onchange="{! c.landingHandleChange }"
+                                          class="customRadioCls"/>
+                </lightning:layoutItem>                
+            </lightning:layout>
+            <aura:if isTrue="{!v.value == 'Yes'}">
+                <lightning:layout >                
+                    <lightning:layoutItem padding="around-small" flexibility="grow" size="3">
+                        <span class="clsFontSize">Select one of the options to enter search criteria</span>
+                    </lightning:layoutItem>
+                    <lightning:layoutItem class="clsPaddingRight" padding="around-small" flexibility="grow" size="2">
+                        <lightning:select name="select" class="clsDrpdnCriteria" aura:id="searchValue">
+                            <aura:iteration items="{!v.searchCriteria}" var="search">
+                                <option text="{!search}"></option>
+                            </aura:iteration>
+                        </lightning:select>
+                    </lightning:layoutItem>
+                    <lightning:layoutItem padding="around-small" flexibility="grow" size="2">
+                        <!--<div onkeyup="{! c.handleKeyUp }">
+                            <lightning:input
+                                             aura:id="enter-search"
+                                             name="enter-search"
+                                             value="{! v.searchText }"
+                                             type="search"
+                                             />
+                        </div>-->
+                        <lightning:input
+                                             aura:id="enter-search"
+                                             name="enter-search"
+                                             value="{! v.searchText }"
+                                             type="search"
+                                             />
+                        
+                    </lightning:layoutItem>
+                    <lightning:layoutItem padding="around-small" flexibility="grow" size="2">
+                        <lightning:button variant="brand-outline" class="clsBtnSubmit" label="Submit" onclick="{! c.handleKeyUp }" />                    
+                    </lightning:layoutItem>
+                </lightning:layout>
+            </aura:if>
+            <aura:if isTrue="{!v.value == 'No'}">
+                <lightning:layout >                
+                    <lightning:layoutItem padding="around-small" flexibility="grow" size="3">
+                        <span class="clsFontSize">Search for SFDC Account Name OR SAP Sold To number</span>
+                    </lightning:layoutItem>
+                    <lightning:layoutItem class="clsPaddingRight" padding="around-small" flexibility="grow" size="2">
+                        <lightning:select name="select" class="clsDrpdnCriteria" aura:id="searchValueAcct">
+                            <aura:iteration items="{!v.searchAcctCriteria}" var="search">
+                                <option text="{!search}"></option>
+                            </aura:iteration>
+                        </lightning:select>
+                    </lightning:layoutItem>
+                    <lightning:layoutItem padding="around-small" flexibility="grow" size="2">
+                        <!--<div onkeyup="{! c.handleAcctKeyUp }">
+                            <lightning:input
+                                             aura:id="enter-searchAcct"
+                                             name="enter-searchAcct"
+                                             value="{! v.searchAcctText }"
+                                             type="search"
+                                             />
+                        </div>-->
+                        <lightning:input
+                                             aura:id="enter-searchAcct"
+                                             name="enter-searchAcct"
+                                             value="{! v.searchAcctText }"
+                                             type="search"
+                                             />
+                    </lightning:layoutItem>
+                    <lightning:layoutItem padding="around-small" flexibility="grow" size="2">
+                        <lightning:button variant="brand-outline" class="clsBtnSubmit" label="Submit" onclick="{! c.handleAcctKeyUp }" />                    
+                    </lightning:layoutItem>
+                </lightning:layout>
+            </aura:if>
+        </div>
+    </aura:if>
+    
+    <aura:if isTrue="{!v.isLandingPage}">        
+        <div style="background-color: beige;color: black;">
+            <lightning:layout horizontalAlign="space">
+                <lightning:layoutItem padding="around-small" flexibility="auto, no-grow" size="12">
+                    <span class="clsFontSize">Is your inquiry related to a shipment scheduled within the next 24 hours?</span>
+                    <lightning:button class="clsLeftIndentCsrNo" label="No" variant="brand" onclick="{! c.CsrNoClick }"/>
+                    <lightning:button class="clsLeftIndent" label="Yes" variant="brand" onclick="{! c.CsrYesClick }"/>                    
+                </lightning:layoutItem>                              
+            </lightning:layout>
+        </div>
+    </aura:if>
+    
+    <aura:if isTrue="{!v.isSearchResFound}">
+        <aura:if isTrue="{!v.value == 'Yes'}">
+            <div class="clsDataTable" style="margin-top: 20px;font-size: medium;">
+                <table class="slds-table slds-table_cell-buffer slds-table_bordered" style="table-layout: fixed;">
+                    <thead>
+                        <tr class="slds-line-height_reset">
+                            <th class="" scope="col">
+                                <div class="slds-truncate" title="Case Number" style="white-space: pre-wrap;">Case Number</div>
+                            </th>
+                            <th class="" scope="col">
+                                <div class="slds-truncate" title="Case Status" style="white-space: pre-wrap;">Case Status</div>
+                            </th>
+                            <th class="" scope="col">
+                                <div class="slds-truncate" title="Type" style="white-space: pre-wrap;">Type</div>
+                            </th>
+                            <th class="" scope="col">
+                                <div class="slds-truncate" title="Sales Order Number" style="white-space: pre-wrap;">Sales Order Number</div>
+                            </th>
+                            <th class="" scope="col">
+                                <div class="slds-truncate" title="Customer PO Number" style="white-space: pre-wrap;">Customer PO Number</div>
+                            </th>
+                            <th class="" scope="col">
+                                <div class="slds-truncate" title="Repair Notification Number" style="white-space: pre-wrap;">Repair Notification Number</div>
+                            </th>
+                            <th class="" scope="col">
+                                <div class="slds-truncate" title="Quote Number" style="white-space: pre-wrap;">Quote Number</div>
+                            </th>
+                            <th class="" scope="col">
+                                <div class="slds-truncate" title="Date/Time Opened" style="white-space: pre-wrap;">Date/Time Opened</div>
+                            </th>
+                            <th class="" scope="col">
+                                <div class="slds-truncate" title="Subject" style="white-space: pre-wrap;">Subject</div>
+                            </th>
+                            <th class="" scope="col">
+                                <div class="slds-truncate" title="Account Name" style="white-space: pre-wrap;">Account Name</div>
+                            </th>
+                            <th class="" scope="col">
+                                <div class="slds-truncate" title="Owner Name" style="white-space: pre-wrap;">Owner Name</div>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <aura:iteration items="{!v.caseList}" var="ct">
+                            <tr class="slds-hint-parent" >
+                                <th data-label="Case Number" scope="row" data-myid="{!ct.Id}" onclick="{!c.handleClick }">
+                                    <div class="slds-truncate" title="{!ct.CaseNumber}" style="white-space: pre-wrap;">
+                                        <a href="" tabindex="-1">{!ct.CaseNumber}</a>
+                                    </div>
+                                </th>
+                                <td data-label="Status">
+                                    <div class="slds-truncate" title="{!ct.Status}" style="white-space: pre-wrap;">{!ct.Status}</div>
+                                </td>
+                                <td data-label="Type">
+                                    <div class="slds-truncate" title="{!ct.Type}" style="white-space: pre-wrap;">{!ct.Type}</div>
+                                </td>
+                                <td data-label="Sales Order Number">
+                                    <div class="slds-truncate" title="{!ct.Sales_Order_Number__c}" style="white-space: pre-wrap;">{!ct.Sales_Order_Number__c}</div>
+                                </td>
+                                <td data-label="Customer PO Number">
+                                    <div class="slds-truncate" title="{!ct.Customer_PO_RO_WONumber__c}" style="white-space: pre-wrap;">{!ct.Customer_PO_RO_WONumber__c}</div>
+                                </td>
+                                <td data-label="Repair Notification Number">
+                                    <div class="slds-truncate" title="{!ct.Repair_Notification_Number__c}" style="white-space: pre-wrap;">{!ct.Repair_Notification_Number__c}</div>
+                                </td>
+                                <td data-label="Quote Number">
+                                    <div class="slds-truncate" title="{!ct.Quote_Number__c}" style="white-space: pre-wrap;">{!ct.Quote_Number__c}</div>
+                                </td>
+                                <td data-label="Date/Time Opened">
+                                    <div class="slds-truncate" title="{!ct.CreatedDate}" style="white-space: pre-wrap;">{!ct.CreatedDate}</div>
+                                </td>
+                                <td data-label="Subject">
+                                    <div class="slds-truncate" title="{!ct.Subject}" style="white-space: pre-wrap;">{!ct.Subject}</div>
+                                </td>
+                                <td data-label="Account Name">
+                                    <div class="slds-truncate" title="{!ct.Account_Name__c}" style="white-space: pre-wrap;">{!ct.Account_Name__c}</div>
+                                </td>
+                                <td data-label="Owner Name">
+                                    <div class="slds-truncate" title="{!ct.OwnerName}" style="white-space: pre-wrap;">{!ct.OwnerName}</div>
+                                </td>
+                            </tr>
+                        </aura:iteration>
+                    </tbody>
+                </table>
+            </div>
+        </aura:if>
+        <aura:if isTrue="{!v.value == 'No'}">
+            <div class="clsDataTable" style="margin-top: 20px;font-size: medium;">
+                <table class="slds-table slds-table_cell-buffer slds-table_bordered" style="table-layout: fixed;">
+                    <thead>
+                        <tr class="slds-line-height_reset">
+                            <th class="" scope="col">
+                                <div class="slds-truncate" title="Account Name" style="white-space: pre-wrap;">Account Name</div>
+                            </th>
+                            <th class="" scope="col">
+                                <div class="slds-truncate" title="SAP Sold To Account Number" style="white-space: pre-wrap;">SAP Sold To Account Number</div>
+                            </th>
+                            <th class="" scope="col">
+                                <div class="slds-truncate" title="CBT Team" style="white-space: pre-wrap;">CBT Team</div>
+                            </th>
+                            <th class="" scope="col">
+                                <div class="slds-truncate" title="Customer Support Focal" style="white-space: pre-wrap;">Customer Support Focal</div>
+                            </th>
+                            <th class="" scope="col">
+                                <div class="slds-truncate" title="Customer Support Escalation" style="white-space: pre-wrap;">Customer Support Escalation</div>
+                            </th>
+                            <th class="" scope="col">
+                                <div class="slds-truncate" title="Business Focal" style="white-space: pre-wrap;">Business Focal</div>
+                            </th>
+                            <th class="" scope="col">
+                                <div class="slds-truncate" title="Business Escalation" style="white-space: pre-wrap;">Business Escalation</div>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <aura:iteration items="{!v.accList}" var="ct">
+                            <tr class="slds-hint-parent" >
+                                <th data-label="Account Name" scope="row" data-myid="{!ct.Id}" onclick="{!c.acctHandleClick }">
+                                    <div class="slds-truncate" title="{!ct.Name}" style="white-space: pre-wrap;">
+                                        <a href="" tabindex="-1">{!ct.Name}</a>
+                                    </div>
+                                </th>
+                                <td data-label="SAP Sold To Account Number">
+                                    <div class="slds-truncate" title="{!ct.SapSoldTo}" style="white-space: pre-wrap;">{!ct.SapSoldTo}</div>
+                                </td>
+                                <td data-label="CBT Team">
+                                    <div class="slds-truncate" title="{!ct.CbtTeam}" style="white-space: pre-wrap;">{!ct.CbtTeam}</div>
+                                </td>
+                                <td data-label="Customer Support Focal">
+                                    <div class="slds-truncate" title="{!ct.CustSupFocal}" style="white-space: pre-wrap;">{!ct.CustSupFocal}</div>
+                                </td>
+                                <td data-label="Customer Support Escalation">
+                                    <div class="slds-truncate" title="{!ct.CustSupEsc}" style="white-space: pre-wrap;">{!ct.CustSupEsc}</div>
+                                </td>
+                                <td data-label="Business Focal">
+                                    <div class="slds-truncate" title="{!ct.BusinessFocal}" style="white-space: pre-wrap;">{!ct.BusinessFocal}</div>
+                                </td>
+                                <td data-label="Business Escalation">
+                                    <div class="slds-truncate" title="{!ct.BusinessEsc}" style="white-space: pre-wrap;">{!ct.BusinessEsc}</div>
+                                </td>
+                            </tr>
+                        </aura:iteration>
+                    </tbody>
+                </table>
+            </div>
+        </aura:if>
+    </aura:if>
+    <aura:if  isTrue="{!v.isSearchResNotFound}" >
+        <div style="background-color: whitesmoke;margin-top: 20px;text-align: center;padding: 100px;font-size: 1.05rem !important;">
+            No items to display.
+        </div>
+    </aura:if>
+    
+    <!--Case Information Section-->
+    <aura:if isTrue="{!v.isCasInfoSelected}">               
+        
+        <div style="position: sticky;top: 0;z-index: 999;padding: 10px;background-color: lightblue;color: black;font-size: large;">
+            <lightning:layout >
+                <lightning:layoutItem padding="around-small" flexibility="auto, no-grow" size="3">
+                    <lightning:icon iconName="standard:case" size="large" />
+                    <div style="display: inline;padding-left: 10px;">
+                        <h1><b>{!v.caseInfoMap.CaseNumber}</b></h1>
+                    </div>                   
+                </lightning:layoutItem>
+                <lightning:layoutItem  alignmentBump="left">
+                    <span style="font-size: 1.05rem !important;padding-right: 20px;font-weight: bold;">Does the information displayed resolve your issue?</span>
+                    <lightning:button class="clsCasInfoYes" label="Yes" variant="brand-outline" onclick="{! c.casInfoYesClick }"/>
+                    <lightning:button class="clsCasInfoNo" label="No, I need to submit a request" variant="brand-outline" onclick="{! c.casInfoNoClick }"/>
+                    <lightning:button class="clsFontSize" label="Return to Start" iconName="utility:home" iconPosition="left" variant="brand" onclick="{! c.backToHome }"/>
+                </lightning:layoutItem>              
+            </lightning:layout>        
+        </div>
+                
+        <div style="margin-top: 20px;">
+            <lightning:layout >                
+                <lightning:layoutItem padding="around-small" flexibility="grow" size="4">
+                    <lightning:input name="casInfo_AccountName" disabled="true" value="{!v.caseInfoMap.AccountName}" label="Account Name" />
+                </lightning:layoutItem>
+                <lightning:layoutItem padding="around-small" flexibility="grow" size="8">
+                    <lightning:input name="casInfo_Subject" disabled="true" value="{!v.caseInfoMap.Subject}" label="Subject" /> 
+                </lightning:layoutItem>              
+            </lightning:layout>
+            <lightning:layout >   
+                <lightning:layoutItem padding="around-small" flexibility="grow" size="4">
+                    <lightning:input name="casInfo_Status" disabled="true" value="{!v.caseInfoMap.Status}" label="Case Status" />
+                </lightning:layoutItem>  
+                <lightning:layoutItem padding="around-small" flexibility="grow" size="4">
+                    <lightning:input name="casInfo_SubStatus" disabled="true" value="{!v.caseInfoMap.Sub_Class}" label="Sub Status" />
+                </lightning:layoutItem>
+                <lightning:layoutItem padding="around-small" flexibility="grow" size="4">
+                    <lightning:input name="casInfo_ReasonHold" disabled="true" value="{!v.caseInfoMap.ReasonforHold}" label="Reason for Hold" />
+                </lightning:layoutItem>
+            </lightning:layout>
+            <lightning:layout >   
+                <lightning:layoutItem padding="around-small" flexibility="grow" size="3">
+                    <lightning:input name="casInfo_SalesOrder" disabled="true" value="{!v.caseInfoMap.SalesOrderNumber}" label="Sales Order Number" />
+                </lightning:layoutItem>  
+                <lightning:layoutItem padding="around-small" flexibility="grow" size="3">
+                    <lightning:input name="casInfo_CustPO" disabled="true" value="{!v.caseInfoMap.CustPoNumber}" label="Customer PO Number" />
+                </lightning:layoutItem>
+                <lightning:layoutItem padding="around-small" flexibility="grow" size="3">
+                    <lightning:input name="casInfo_RepairNumber" disabled="true" value="{!v.caseInfoMap.RepairNumber}" label="Repair Notification Number" />
+                </lightning:layoutItem>
+                <lightning:layoutItem padding="around-small" flexibility="grow" size="3">
+                    <lightning:input name="casInfo_QuoteNumber" disabled="true" value="{!v.caseInfoMap.QuoteNumber}" label="Quote Number" />
+                </lightning:layoutItem>
+            </lightning:layout>
+            <lightning:layout >   
+                <lightning:layoutItem padding="around-small" flexibility="grow" size="3">
+                    <lightning:input name="casInfo_DateTimeOpened" disabled="true" value="{!v.caseInfoMap.DateTimeOpened}" label="Date&#47;Time Opened" />
+                </lightning:layoutItem>  
+                <lightning:layoutItem padding="around-small" flexibility="grow" size="3">
+                    <lightning:input name="casInfo_DateTimeClosed" disabled="true" value="{!v.caseInfoMap.DateTimeClosed}" label="Date&#47;Time Closed" />
+                </lightning:layoutItem>
+                <lightning:layoutItem padding="around-small" flexibility="grow" size="3">
+                    <lightning:input name="casInfo_CasOwner" disabled="true" value="{!v.caseInfoMap.CasOwner}" label="Case Owner" />
+                </lightning:layoutItem>
+                <lightning:layoutItem padding="around-small" flexibility="grow" size="3">
+                    <lightning:input name="casInfo_CasRefId" disabled="true" value="{!v.caseInfoMap.CasRefId}" label="Case Ref ID" />
+                </lightning:layoutItem>
+            </lightning:layout>
+            <lightning:layout horizontalAlign="space">
+                <lightning:layoutItem padding="around-small" flexibility="grow" size="6">
+                    <lightning:textarea name="casInfo_InternalHW" disabled="true" value="{!v.caseInfoMap.InternalHWAction}" label="Internal HW Action" />
+                </lightning:layoutItem>
+                <lightning:layoutItem padding="around-small" flexibility="grow" size="6">
+                    <lightning:textarea name="casInfo_Notes" disabled="true" value="{!v.caseInfoMap.Notes}" label="Notes" />  
+                </lightning:layoutItem>                
+            </lightning:layout>
+            <!--<lightning:layout horizontalAlign="space">
+                <lightning:layoutItem padding="around-small" flexibility="grow" size="12">
+                    <lightning:textarea name="casInfo_Comments" disabled="true" value="{!v.caseInfoMap.Comments}" label="Case Comments" />
+                </lightning:layoutItem>                              
+            </lightning:layout>-->
+            
+            <div class="clsDataTable" style="margin-top: 20px;font-size: medium;">                
+                <article class="slds-card" style="background-color: powderblue;">
+                    <div class="slds-card__header slds-grid">
+                        <lightning:icon iconName="standard:case_comment" size="medium" />
+                        <div style="display: inline;padding-left: 10px;padding-top: 5px;">
+                            <h1><b>Case Comments</b></h1>
+                        </div>
+                    </div>
+                    <div class="slds-card__body">
+                        <aura:if  isTrue="{!v.casCommList != null}" >
+                        <table class="slds-table slds-table_cell-buffer slds-table_bordered" style="table-layout: fixed;">
+                            <thead>
+                                <tr >
+                                    <th class="" scope="col" width="25%">
+                                        <div class="slds-truncate" title="Created Date">Created Date</div>
+                                    </th>
+                                    <th class="" scope="col" width="25%">
+                                        <div class="slds-truncate" title="User">User</div>
+                                    </th>
+                                    <th class="" scope="col" width="80%">
+                                        <div class="slds-truncate" title="Comment">Comment</div>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                
+                                <aura:iteration items="{!v.casCommList}" var="ct">
+                                    <tr class="slds-hint-parent" >                                
+                                        <td data-label="Created Date" width="25%">
+                                            <div class="slds-truncate" title="{!ct.CreatedDate}">
+                                                <ui:outputDate value="{!ct.CreatedDate}"/>
+                                            </div>
+                                        </td>
+                                        <td data-label="User" width="25%">
+                                            <div class="slds-truncate" title="{!ct.CreatedBy}">{!ct.CreatedBy}</div>
+                                        </td>
+                                        <td data-label="Comment" width="80%">
+                                            <div class="slds-truncate" style="white-space: pre-wrap; " title="{!ct.CommentBody}">{!ct.CommentBody}</div>
+                                        </td>
+                                    </tr>
+                                </aura:iteration>                                
+                            </tbody>
+                        </table></aura:if>
+                        <aura:if  isTrue="{!v.casCommList == null}" >
+                            <div style="background-color: whitesmoke;margin-top: 20px;text-align: center;padding: 100px;font-size: 1.05rem !important;">
+                                No items to display.
+                            </div>
+                        </aura:if>
+                    </div>
+                </article>
+                
+            </div>
+            
+        </div>        
+    </aura:if>
+    <!--Case Information Section Ended-->
+    
+    <!--Use aura:if tag to display Model Box, on the bese of conditions. [isOpen boolean attribute] -->   
+    <aura:if isTrue="{!v.isOpenModel}">
+        
+        <!--###### MODAL BOX Start######--> 
+        <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open">
+            <div class="slds-modal__container">
+                <!-- ###### MODAL BOX HEADER Start ######-->
+                <header class="slds-modal__header">
+                    <lightning:buttonIcon iconName="utility:close"
+                                          onclick="{! c.closeModel }"
+                                          alternativeText="close"
+                                          variant="bare-inverse"
+                                          class="slds-modal__close"/>
+                    <h2 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">Thank You</h2>
+                </header>
+                <!--###### MODAL BOX BODY Part Start######-->
+                <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                    <p><b>{!v.modelBodyValue}</b></p>
+                </div>
+                <!--###### MODAL BOX FOOTER Part Start ######-->
+                <footer class="slds-modal__footer">
+                    <lightning:button variant="neutral" 
+                                      label="Back To Home"
+                                      title="Back To Home"
+                                      onclick="{! c.closeModel }"/>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+        <!--###### MODAL BOX Part END Here ######-->
+        
+    </aura:if>
+    
+    <!--Case Information Help Needed-->
+    <aura:if isTrue="{!v.isCasInfoHelpNeeded}"> 
+        <div style="position: sticky;top: 0;z-index: 999;padding: 10px;background-color: lightblue;color: black;font-size: large;">
+            <lightning:layout >
+                <lightning:layoutItem padding="around-small" flexibility="auto, no-grow" size="3">
+                    <lightning:icon iconName="standard:case" size="large" />
+                    <div style="display: inline;padding-left: 10px;">
+                        <h1><b>{!v.caseInfoMap.CaseNumber}</b></h1>
+                    </div>                   
+                </lightning:layoutItem>
+                <lightning:layoutItem  alignmentBump="left">
+                    <span style="font-size: 1.05rem !important;padding-right: 20px;font-weight: bold;">Please Submit your request</span>
+                    <lightning:button class="clsBtnCasHelpNeeded" label="Submit" variant="brand-outline" onclick="{! c.casInfoHelpSubmitClick }"/>
+                    <lightning:button class="clsBtnCasHelpNeeded" label="Cancel" variant="brand-outline" onclick="{! c.casInfoHelpCancelClick }"/>
+                    <lightning:button  label="Return to Start" iconName="utility:home" iconPosition="left" variant="brand" onclick="{! c.backToHome }"/>
+                </lightning:layoutItem>              
+            </lightning:layout>        
+        </div>
+               
+        
+        <lightning:layout horizontalAlign="space">
+            <lightning:layoutItem padding="around-small" flexibility="grow" size="12">
+                <lightning:textarea aura:id="casInfoHelpForm" name="casInfoHelpNeeded_Comments" value="{!v.caseInfoHelpNeededMap.Comments}" label="Any details about the issue and/or what you need from the customer" />
+            </lightning:layoutItem>                              
+        </lightning:layout>
+        <lightning:layout horizontalAlign="space">
+            <lightning:layoutItem padding="around-small" flexibility="auto, no-grow" size="3">
+                <!--<span class="clsFontSize">Attachments related to this request</span>-->
+                <lightning:input type="email" required="true" aura:id="casInfoHelpForm" name="casInfoHelpNeeded_Email" value="{!v.caseInfoHelpNeededMap.EmailId}" label="Your email address" />
+            </lightning:layoutItem>
+            <lightning:layoutItem padding="around-small" flexibility="auto, no-grow" size="6">
+                <lightning:input aura:id="file-input" type="file"
+                                 files="{!v.fileToBeUploaded}"
+                                 onchange="{!c.onFileUploaded}"                                 
+                                 label="Attachments related to this request"
+                                 name="file" multiple="true"/>
+                <span style="font-size: 0.92rem!important;color: red;display: block;">Note: Individual file size is limited to 2GB</span>
+                <aura:iteration items="{!v.fileToBeUploaded}" var ="file" indexVar="index">                    
+                    <span class="clsFontSize">{!file.Title}&nbsp;</span>
+                    <a onclick="{!c.removeRow}" data-record="{!index}">
+                        <lightning:icon iconName="utility:close" size="x-small" title="x-small size" alternativeText="close"/>
+                        <span class="slds-assistive-text">Close</span></a>&nbsp;&nbsp;
+                </aura:iteration>
+                <lightning:layoutItem padding="around-small" flexibility="auto, no-grow" size="8">
+                    <aura:if isTrue="{!v.isFileTitleExceeded}">
+                        <span style="display: inline-block;font-size: 0.92rem!important;color: red;margin-top: 10px;font-weight: bold;">Reduce the file name character length less than 80 and upload again:</span>
+                        <aura:iteration items="{!v.fileTitleExceedList}" var ="file" indexVar="index">
+                            <ul>
+                                <li style="font-size: 0.92rem!important;color: red;">{!file.Title}</li>
+                            </ul>                                       
+                        </aura:iteration>
+                    </aura:if>
+                </lightning:layoutItem>
+            </lightning:layoutItem>
+            <lightning:layoutItem padding="around-small" flexibility="auto, no-grow" size="3"></lightning:layoutItem>            
+        </lightning:layout>
+    
+    </aura:if>
+    <!--Case Information Help Needed Ended-->
+    
+    <!--Case Information Help Inactive Needed-->
+    <aura:if isTrue="{!v.isCasInfoInactiveHelpNeeded}"> 
+        <div style="position: sticky;top: 0;z-index: 999;padding: 10px;background-color: lightblue;color: black;font-size: large;">
+            <lightning:layout >
+                <lightning:layoutItem padding="around-small" flexibility="auto, no-grow" size="3">
+                    <lightning:icon iconName="standard:case" size="large" />
+                    <div style="display: inline;padding-left: 10px;">
+                        <h1><b>{!v.caseInfoMap.CaseNumber}</b></h1>
+                    </div>                   
+                </lightning:layoutItem>
+                <lightning:layoutItem  alignmentBump="left">
+                    <span style="font-size: 1.05rem !important;padding-right: 20px;font-weight: bold;">Please Submit your request</span>
+                    <lightning:button class="clsBtnCasHelpNeeded" label="Submit" variant="brand-outline" onclick="{! c.casInfoInactiveHelpSubmitClick }"/>
+                    <lightning:button class="clsBtnCasHelpNeeded" label="Cancel" variant="brand-outline" onclick="{! c.casInfoHelpCancelClick }"/>
+                    <lightning:button  label="Return to Start" iconName="utility:home" iconPosition="left" variant="brand" onclick="{! c.backToHome }"/>
+                </lightning:layoutItem>              
+            </lightning:layout>        
+        </div>
+               
+        
+        <lightning:layout horizontalAlign="space">
+            <lightning:layoutItem padding="around-small" flexibility="grow" size="12">
+                <lightning:textarea aura:id="casInfoInactiveHelpForm" name="casInfoInactiveHelpNeeded_Comments" value="{!v.caseInfoHelpNeededMap.Comments}" label="Any details about the issue and/or what you need from the customer" />
+            </lightning:layoutItem>                              
+        </lightning:layout>
+        <lightning:layout horizontalAlign="space">
+            <lightning:layoutItem padding="around-small" flexibility="auto, no-grow" size="3">
+                <!--<span class="clsFontSize">Attachments related to this request</span>-->
+                <lightning:input type="email" required="true" aura:id="casInfoInactiveHelpForm" name="casInfoInactiveHelpNeeded_Email" value="{!v.caseInfoHelpNeededMap.EmailId}" label="Your email address" />
+            </lightning:layoutItem>
+            <lightning:layoutItem padding="around-small" flexibility="auto, no-grow" size="6">
+                <lightning:input aura:id="file-input_InfoInactiveCase" type="file"
+                                 files="{!v.fileToBeUploaded}"
+                                 onchange="{!c.onFileUploaded}"                                 
+                                 label="Attachments related to this request"
+                                 name="file" multiple="true"/>
+                <span style="font-size: 0.92rem!important;color: red;display: block;">Note: Individual file size is limited to 2GB</span>
+                <aura:iteration items="{!v.fileToBeUploaded}" var ="file" indexVar="index">                    
+                    <span class="clsFontSize">{!file.Title}&nbsp;</span>
+                    <a onclick="{!c.removeRow}" data-record="{!index}">
+                        <lightning:icon iconName="utility:close" size="x-small" title="x-small size" alternativeText="close"/>
+                        <span class="slds-assistive-text">Close</span></a>&nbsp;&nbsp;
+                </aura:iteration>
+                <lightning:layoutItem padding="around-small" flexibility="auto, no-grow" size="8">
+                    <aura:if isTrue="{!v.isFileTitleExceeded}">
+                        <span style="display: inline-block;font-size: 0.92rem!important;color: red;margin-top: 10px;font-weight: bold;">Reduce the file name character length less than 80 and upload again:</span>
+                        <aura:iteration items="{!v.fileTitleExceedList}" var ="file" indexVar="index">
+                            <ul>
+                                <li style="font-size: 0.92rem!important;color: red;">{!file.Title}</li>
+                            </ul>                                       
+                        </aura:iteration>
+                    </aura:if>
+                </lightning:layoutItem>
+            </lightning:layoutItem>
+            <lightning:layoutItem padding="around-small" flexibility="auto, no-grow" size="3"></lightning:layoutItem>            
+        </lightning:layout>
+    
+    </aura:if>
+    <!--Case Information Help Inactive Needed Ended-->
+    
+    <!--Relevant Order Type and Workstream-->
+    <aura:if isTrue="{!v.isWorkstreamNeeded}">
+        
+        <div style="position: sticky;top: 0;z-index: 999;padding: 10px;background-color: lightblue;color: black;font-size: large;">
+            <lightning:layout >
+                <lightning:layoutItem padding="around-small" flexibility="auto, no-grow" size="3">
+                    <lightning:icon iconName="standard:case" size="large" />
+                    <div style="display: inline;padding-left: 10px;">
+                        <h1><b>New Case</b></h1>
+                    </div>                   
+                </lightning:layoutItem>
+                <lightning:layoutItem  alignmentBump="left">
+                    <span style="font-size: 1.05rem !important;padding-right: 20px;font-weight: bold;">Please Submit your request</span>
+                    <lightning:button class="clsBtnCasHelpNeeded" label="Submit" variant="brand-outline" onclick="{! c.casInfoInactiveSubmitClick }"/>
+                    <lightning:button class="clsBtnCasHelpNeeded" label="Cancel" variant="brand-outline" onclick="{! c.casInfoInactiveCancelClick }"/>
+                    <lightning:button  label="Return to Start" iconName="utility:home" iconPosition="left" variant="brand" onclick="{! c.backToHome }"/>
+                </lightning:layoutItem>              
+            </lightning:layout>        
+        </div>        
+        
+    <div>
+        <h3 style="font-weight: bold;font-size: medium;background-color: darkgray;color: white;margin-top: 40px;" class="slds-section-title--divider">Please Select the Workstream and relevant order type</h3>
+        
+        <lightning:layout >            
+            <lightning:layoutItem padding="around-small" flexibility="auto, no-grow" size="5">
+                <lightning:radioGroup aura:id="casInfoInactiveForm" required="true" name="radioGroup"
+                                      options="{! v.optionWorkstream }"
+                                      value="{! v.optionWorkstreamValue }"
+                                      type="radio"
+                                      label="Please Select the Workstream"
+                                      onchange="{! c.workstreamHandleChange }"
+                                      />
+            </lightning:layoutItem>
+            <lightning:layoutItem padding="around-small" flexibility="auto, no-grow" size="5">
+                <aura:if isTrue="{!v.optionWorkstreamValue == 'ROI'}">
+                    <lightning:select aura:id="workstreamRoiSel" required="True" name="workstreamRoiSel" value="{!v.workstreamSelectedDrpDownValue}" label="Select the relevant order type">
+                        <option value="{!null}">Please select</option>
+                        <aura:iteration items="{!v.workstreamRoiDrpDown}" var="status">
+                            <option value="{!status.value}" selected="{!status.value == v.workstreamSelectedDrpDownValue}">{!status.label}</option>
+                        </aura:iteration>
+                    </lightning:select>
+                </aura:if>
+                <aura:if isTrue="{!v.optionWorkstreamValue == 'Spares'}">
+                    <lightning:select aura:id="workstreamSparesSel" required="True" name="workstreamSparesSel" value="{!v.workstreamSelectedDrpDownValue}" label="Select the relevant order type">
+                        <option value="{!null}">Please select</option>
+                        <aura:iteration items="{!v.workstreamSparesDrpDown}" var="status">
+                            <option value="{!status.value}" selected="{!status.value == v.workstreamSelectedDrpDownValue}">{!status.label}</option>
+                        </aura:iteration>
+                    </lightning:select>
+                </aura:if>
+                <aura:if isTrue="{!v.optionWorkstreamValue == 'OEM'}">
+                    <lightning:select aura:id="workstreamOemSel" required="True" name="workstreamOemSel" value="{!v.workstreamSelectedDrpDownValue}" label="Select the relevant order type">
+                        <option value="{!null}">Please select</option>
+                        <aura:iteration items="{!v.workstreamOEMDrpDown}" var="status">
+                            <option value="{!status.value}" selected="{!status.value == v.workstreamSelectedDrpDownValue}">{!status.label}</option>
+                        </aura:iteration>
+                    </lightning:select>
+                </aura:if>
+            </lightning:layoutItem>
+            <lightning:layoutItem padding="around-small" flexibility="auto, no-grow" size="1"></lightning:layoutItem>
+        </lightning:layout>
+        <h3 style="font-weight: bold;font-size: medium;background-color: darkgray;color: white;margin-top: 40px;" class="slds-section-title--divider">Order Information (Please enter all available details)</h3>
+        <lightning:layout horizontalAlign="space">
+            <lightning:layoutItem padding="around-small" flexibility="grow" size="3">
+                <lightning:input name="casInfoInactive_SalesOrderNumber" value="{!v.caseInfoInactiveMap.SalesOrderNumber}" label="Sales Order Number" />
+            </lightning:layoutItem>
+            <lightning:layoutItem padding="around-small" flexibility="grow" size="3">
+                <lightning:input name="casInfoInactive_CustPoNumber" value="{!v.caseInfoInactiveMap.CustPoNumber}" label="Cust PO Number" />
+            </lightning:layoutItem>
+            <lightning:layoutItem padding="around-small" flexibility="grow" size="3">
+                <lightning:input name="casInfoInactive_RepairNotificationNumber" value="{!v.caseInfoInactiveMap.RepairNotificationNumber}" label="Repair Notification Number" />
+            </lightning:layoutItem>
+            <lightning:layoutItem padding="around-small" flexibility="grow" size="3">
+                <lightning:input name="casInfoInactive_QuoteNumber" value="{!v.caseInfoInactiveMap.QuoteNumber}" label="Quote Number" />
+            </lightning:layoutItem>
+        </lightning:layout>
+        <h3 style="font-weight: bold;font-size: medium;background-color: darkgray;color: white;margin-top: 40px;" class="slds-section-title--divider">Help Needed</h3>
+        <lightning:layout >   
+            <lightning:layoutItem padding="around-small" flexibility="grow" size="3">
+                <span class="clsFontSize">Do you need information from the customer?</span>                
+            </lightning:layoutItem>
+            <lightning:layoutItem padding="around-small" flexibility="grow" size="4">
+            <lightning:radioGroup name="radioGroup_casInfoInactive"
+                                          options="{! v.optionsCasInfoInactive }"
+                                          value="{! v.optionCasInfoInactiveValue }"
+                                          type="radio"                                          
+                                          class="customRadioCls"/>
+            </lightning:layoutItem>
+            </lightning:layout>
+        <lightning:layout>
+            <lightning:layoutItem padding="around-small" flexibility="grow" size="6">
+                <lightning:input aura:id="casInfoInactiveForm" required="true" name="casInfoInactive_Subject" value="{!v.caseInfoInactiveMap.Subject}" label="Subject" />
+            </lightning:layoutItem>            
+        </lightning:layout>
+        <lightning:layout horizontalAlign="space">
+            <lightning:layoutItem padding="around-small" flexibility="grow" size="12">
+                <lightning:textarea aura:id="casInfoInactiveForm" name="casInfoInactive_Comments" value="{!v.caseInfoInactiveMap.Comments}" label="Any details about the issue and/or what you need from the customer" />
+            </lightning:layoutItem>                              
+        </lightning:layout>
+        <lightning:layout horizontalAlign="space">
+            <lightning:layoutItem padding="around-small" flexibility="auto, no-grow" size="3">                
+                <lightning:input type="email" required="true" aura:id="casInfoInactiveForm" name="casInfoInactive_Email" value="{!v.caseInfoInactiveMap.EmailId}" label="Your email address" />
+            </lightning:layoutItem>
+            <lightning:layoutItem padding="around-small" flexibility="auto, no-grow" size="6">
+                <lightning:input aura:id="file-input_casInactive" type="file"
+                                 files="{!v.fileToBeUploaded}"
+                                 onchange="{!c.onFileUploaded}"                                 
+                                 label="Attachments related to this request"
+                                 name="file_casInactive" multiple="true"/>
+                <span style="font-size: 0.92rem!important;color: red;display: block;">Note: Individual file size is limited to 2GB</span>
+                <aura:iteration items="{!v.fileToBeUploaded}" var ="file" indexVar="index">                    
+                    <span class="clsFontSize">{!file.Title}&nbsp;</span>
+                    <a onclick="{!c.removeRow}" data-record="{!index}">
+                        <lightning:icon iconName="utility:close" size="x-small" title="x-small size" alternativeText="close"/>
+                        <span class="slds-assistive-text">Close</span></a>&nbsp;&nbsp;
+                </aura:iteration>
+                <lightning:layoutItem padding="around-small" flexibility="auto, no-grow" size="8">
+                    <aura:if isTrue="{!v.isFileTitleExceeded}">
+                        <span style="display: inline-block;font-size: 0.92rem!important;color: red;margin-top: 10px;font-weight: bold;">Action Required: File name is too long.  Rename your file using less than 80 characters and re-upload.</span>
+                        <aura:iteration items="{!v.fileTitleExceedList}" var ="file" indexVar="index">
+                            <ul>
+                                <li style="font-size: 0.92rem!important;color: red;">{!file.Title}</li>
+                            </ul>                                       
+                        </aura:iteration>
+                    </aura:if>
+                </lightning:layoutItem>
+            </lightning:layoutItem>            
+            <lightning:layoutItem padding="around-small" flexibility="auto, no-grow" size="3"></lightning:layoutItem>            
+        </lightning:layout>
+    </div>
+        
+    </aura:if>
+    
+    
+</aura:component>

@@ -1,0 +1,78 @@
+.THIS {
+}
+.THIS .slds-radio .slds-form-element__label{
+    font-size: 1.05rem !important;
+}
+.THIS .slds-form-element__label{
+    font-size: 1.05rem !important;
+    font-weight: bold;
+}
+.THIS .slds-form-element__control {
+    font-size: 1.05rem !important;    
+}
+
+.THIS .customRadioCls .slds-form-element__control .slds-radio{
+     display : inline-block !important;
+}
+.THIS .clsDrpdnCriteria .slds-form-element__control .slds-grow{
+   width: 200px;
+}
+.THIS.slds-spinner_container {  
+    z-index: 10000;
+    position: fixed;   
+}
+.THIS .slds-textarea {
+    height:100px !important;
+}
+.THIS .clsFontSize {
+    font-size: 1.05rem !important;
+}
+.THIS .clsLeftIndent {
+    margin-left: 10px;
+    font-weight: bold;
+    font-size: 1.05rem !important;
+    padding-left: 55px;
+    padding-right: 55px;
+}
+.THIS .clsLeftIndentCsrNo {
+    margin-left: 15px;
+    padding-left: 55px;
+    padding-right: 55px;
+    font-weight: bold;
+    font-size: 1.05rem !important;
+}
+.THIS .clsCasInfoYes {
+    font-size: medium;
+    height: 50px;
+    width: 140px;
+    font-weight: bold;
+}
+.THIS .clsCasInfoNo {
+    font-size: medium;
+    height: 50px;
+    width: 180px;
+    font-weight: bold;
+}
+.THIS table .clsTable {
+   table-layout: fixed;
+  width: 100%;  
+}
+.THIS .clsCasHelpNeededSize {
+    font-size: 1.05rem !important;
+    background-color: khaki;
+    color: black;
+}
+.THIS .clsBtnCasHelpNeeded {
+    height: 50px;
+    width: 120px;
+    font-weight: bold;
+}
+.THIS .clsPaddingRight {
+    padding-right: 0px;
+}
+.THIS .clsBtnSubmit {
+    font-size: 1.05rem !important;
+    height: 40px;
+    width: 130px;
+    font-weight: bold;
+}
